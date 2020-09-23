@@ -31,6 +31,11 @@ function check_version() {
         echo "${1} is not a valid version" >&2
         exit 1
     fi
+
+    if git rev-parse "v${1}" >/dev/null 2>&1; then
+        echo "v${1} tag already exists" >&2
+        exit 1
+    else
 }
 
 check_version "${new_version}"
