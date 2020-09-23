@@ -4,8 +4,11 @@ import (
 	"github.com/elastisys/ck8s/api"
 )
 
-var supportedImages = []string{
-	"CK8S-BaseOS-v0.0.6",
+var supportedImages = []*api.Image{
+	api.NewImage("CK8S BaseOS v0.0.6", "v1.15.11"),
+	api.NewImage("ck8s-v1.15.12+ck8s0", "v1.15.12"),
+	api.NewImage("ck8s-v1.16.14+ck8s0", "v1.16.14"),
+	api.NewImage("ck8s-v1.17.11+ck8s0", "v1.17.11"),
 }
 
 var clusterFlavorMap = map[api.ClusterFlavor]func(api.ClusterType, string) api.Cluster{
@@ -63,7 +66,7 @@ func (e *CloudProvider) TerraformBackendConfig() *api.TerraformBackendConfig {
 	return backendConfig
 }
 
-func (e *CloudProvider) MachineImages(api.NodeType) []string {
+func (e *CloudProvider) MachineImages(api.NodeType) []*api.Image {
 	return supportedImages
 }
 

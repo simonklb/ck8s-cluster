@@ -288,6 +288,24 @@ func (c *ClusterClient) Machine(name string) (api.MachineState, error) {
 	return state.Machine(name)
 }
 
+func (c *ClusterClient) validateMachine(machine *api.Machine) error {
+	c.logger.Debug(
+		"client_validate_machine",
+		zap.String("image", machine.Image.Name),
+	)
+
+	version, err := c.kubectl.ServerVersion()
+	if err != nil {
+		return fmt.Errorf("error getting API server version: %w", err)
+	}
+
+	if err := machine.Image.IsSupported(version); err != nil {
+		return fmt.Errorf("image not supported by cluster API server: %w", err)
+	}
+
+	return nil
+}
+
 // AddMachine adds a new machine to the cluster configuration.
 func (c *ClusterClient) AddMachine(
 	name string,
@@ -329,6 +347,10 @@ func (c *ClusterClient) AddMachine(
 		return "", fmt.Errorf("error building machine: %w", err)
 	}
 
+	if err := c.validateMachine(machine); err != nil {
+		return "", fmt.Errorf("error while validating machine: %w", err)
+	}
+
 	return c.cluster.AddMachine(name, machine)
 }
 
@@ -368,6 +390,10 @@ func (c *ClusterClient) CloneMachine(
 		if err != nil {
 			return "", fmt.Errorf("error building machine: %w", err)
 		}
+
+		if err := c.validateMachine(machine); err != nil {
+			return "", fmt.Errorf("error while validating machine: %w", err)
+		}
 	}
 
 	return c.cluster.AddMachine("", machine)
@@ -404,6 +430,16 @@ func (c *ClusterClient) ResetNode(name string) error {
 	// TODO: machine already reseted
 	if err := c.MachineClient(machine).Reset(); err != nil {
 		return err
+	}
+
+	if machine.NodeType == api.Master {
+		c.logger.Debug("client_node_drain_master_lb_timeout_wait")
+
+		// Wait time based on the longest load balancer health check timeout,
+		// which is CityCloud.
+		// TODO: Find a better solution for this. Could we perhaps force remove
+		// load balancer members?
+		time.Sleep((10*5 + 20*4) * time.Second)
 	}
 
 	return c.kubectl.DeleteNode(name)
@@ -450,12 +486,38 @@ func (c *ClusterClient) RemoveNode(name string) error {
 		return fmt.Errorf("error applying Terraform config: %w", err)
 	}
 
-	// Delete the node from Kubernetes.
-	if nodeExists {
-		c.kubectl.DeleteNode(name)
+	return nil
+}
+
+// Upgrade upgrades the Kubernetes control plane to the newest Kubeadm version
+// available on the current machine image.
+func (c *ClusterClient) Upgrade(name string) error {
+	machine, err := c.Machine(name)
+	if err != nil {
+		return fmt.Errorf("error getting machine: %w", err)
+	}
+
+	if machine.NodeType != api.Master {
+		return fmt.Errorf("machine is not a master node: %s", name)
+	}
+
+	if err := c.MachineClient(machine).Upgrade(c.autoApprove); err != nil {
+		return err
 	}
 
 	return nil
+}
+
+// MachineImages return the available machine images for a certain node type.
+func (c *ClusterClient) MachineImages(
+	nodeType api.NodeType,
+) ([]*api.Image, error) {
+	cloudProvider, err := CloudProviderFromType(c.cluster.CloudProvider())
+	if err != nil {
+		return nil, err
+	}
+
+	return cloudProvider.MachineImages(nodeType), nil
 }
 
 // S3Apply renders the s3cfg file and creates the S3 buckets.

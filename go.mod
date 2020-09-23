@@ -13,8 +13,9 @@ require (
 	github.com/mitchellh/mapstructure v1.3.2
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.6.3
-	go.mozilla.org/sops/v3 v3.5.0
+	go.mozilla.org/sops/v3 v3.6.1
 	go.uber.org/zap v1.15.0
-	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
-	gopkg.in/yaml.v2 v2.2.4
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	gopkg.in/yaml.v2 v2.2.8
+	k8s.io/apimachinery v0.19.0
 )
