@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Fetches all tags
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::$(git describe --tags --abbrev=0 HEAD)
