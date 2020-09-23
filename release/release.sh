@@ -3,7 +3,7 @@
 set -euo pipefail
 
 function usage() {
-    echo "Usage ${0} VERSION" >&2
+    echo "Usage: ${0} VERSION" >&2
     exit 1
 }
 
